@@ -1,21 +1,34 @@
 const axios = require("axios");
 
-// Função para buscar cotação do euro
-async function fetchEuroRate() {
+const fetchEuroRate = async () => {
     try {
-        const url = "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda=%27EUR%27&@dataCotacao=%2701-25-2025%27&$format=json";
+        const now = new Date();
+        // Formata a data para MM-DD-YYYY
+        const formattedDate = now.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+        }).replace(/\//g, '-'); // Substitui "/" por "-"
+        
+        const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='EUR'&@dataCotacao='${formattedDate}'&$top=100&$format=json&$select=cotacaoCompra,dataHoraCotacao`;
+
         const response = await axios.get(url);
-        
-        // Pega o primeiro valor da resposta, que será a cotação do dia
-        const cotacao = response.data.value[0].cotacaoCompra;
-        const dataCotacao = response.data.value[0].dataHoraCotacao;
-        
-        return { cotacao, dataCotacao }; // Retorna o valor da cotação e a data/hora
+        const data = response.data.value;
+
+        if (data && data.length > 0) {
+            // Retorna a última cotação disponível
+            const { cotacaoCompra, dataHoraCotacao } = data[data.length - 1];
+            return { cotacao: cotacaoCompra, dataCotacao: dataHoraCotacao };
+        } else {
+            throw new Error("Dados indisponíveis.");
+        }
     } catch (error) {
-        console.error("Erro ao buscar cotação do euro:", error);
-        throw error; // Em caso de erro, lançamos a exceção para tratar no frontend
+        console.error("Erro ao buscar cotação do euro:", error.message);
+        throw error;
     }
-}
+};
+
+
 
 
 module.exports = fetchEuroRate;

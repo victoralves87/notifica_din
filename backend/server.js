@@ -15,11 +15,10 @@ app.use("/api", notificationRoutes); // Define o prefixo "/api" para as rotas
 const emailsFilePath = path.join(__dirname, "emails.json");
 
 // Rota para retornar a cotação do euro
-app.get("/taxa-euro/:date", async (req, res) => {
+app.get("/taxa-euro", async (req, res) => {
     try {
-        const { date } = req.params;  // Captura a data do parâmetro na URL
-        const { cotacao, dataCotacao } = await fetchEuroRate(date); // Chama a função passando a data
-        res.json({ cotacao, dataCotacao }); // Retorna a cotação e a data/hora como resposta
+        const { cotacao, dataCotacao } = await fetchEuroRate();
+        res.json({ cotacao, dataCotacao });
     } catch (error) {
         res.status(500).json({ message: "Erro ao obter cotação do euro." });
     }
