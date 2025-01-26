@@ -5,14 +5,33 @@ const axios = require("axios");
 const cron = require("node-cron");
 const sendEmail = require("./utils/emailService");
 const notificationRoutes = require("./routes/notifications");
+const fetchEuroRate = require("./utils/taxaEuro"); // Importando a função de 'utils/euroRate'
 
 const app = express();
 app.use(express.json());
 app.use("/api", notificationRoutes); // Define o prefixo "/api" para as rotas
-
     
 // Caminho para o arquivo JSON onde os e-mails serão armazenados
 const emailsFilePath = path.join(__dirname, "emails.json");
+
+// Rota para retornar a cotação do euro
+app.get("/taxa-euro/:date", async (req, res) => {
+    try {
+        const { date } = req.params;  // Captura a data do parâmetro na URL
+        const { cotacao, dataCotacao } = await fetchEuroRate(date); // Chama a função passando a data
+        res.json({ cotacao, dataCotacao }); // Retorna a cotação e a data/hora como resposta
+    } catch (error) {
+        res.status(500).json({ message: "Erro ao obter cotação do euro." });
+    }
+});
+
+
+// Configuração do cron job para enviar notificações diárias
+cron.schedule("0 9 * * *", async () => {
+    const taxaEuro = await fetchEuroRate(); // Pegando a cotação do euro
+    // Enviar notificações por email ou qualquer outra lógica
+    console.log("Cotação do euro:", taxaEuro);
+});
 
 // Função para carregar os e-mails do arquivo
 function loadEmails() {
@@ -40,13 +59,6 @@ app.post("/subscribe", (req, res) => {
     saveEmails(emails);
     res.status(200).json({ message: "Inscrito com sucesso!" });
 });
-
-// Função para buscar cotação do euro
-async function fetchEuroRate() {
-    const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoUltima(moeda=@moeda)?@moeda='EUR'&$top=1&$format=json`;
-    const response = await axios.get(url);
-    return response.data.value[0].cotacaoCompra;
-}
 
 // Cron job para enviar e-mails diariamente
 cron.schedule("0 9 * * *", async () => {
