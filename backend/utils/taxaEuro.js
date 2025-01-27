@@ -1,34 +1,33 @@
 const axios = require("axios");
 
 const fetchEuroRate = async () => {
-    try {
-        const now = new Date();
-        // Formata a data para MM-DD-YYYY
-        const formattedDate = now.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-        }).replace(/\//g, '-'); // Substitui "/" por "-"
-        
-        const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='EUR'&@dataCotacao='${formattedDate}'&$top=100&$format=json&$select=cotacaoCompra,dataHoraCotacao`;
+    // Pega a data de hoje no formato YYYY-MM-DD
+    const today = new Date().toISOString().split("T")[0]; 
 
+    // Converte para o formato MM-DD-YYYY
+    const formattedDate = today.split("-").slice(1).concat(today.split("-")[0]).join("-");
+
+    const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda=%27EUR%27&@dataCotacao=%27${formattedDate}%27&$top=5&$format=json&$select=cotacaoCompra,dataHoraCotacao`;
+
+    console.log("Data formatada para a URL:", formattedDate)
+
+    try {
         const response = await axios.get(url);
         const data = response.data.value;
 
-        if (data && data.length > 0) {
-            // Retorna a última cotação disponível
-            const { cotacaoCompra, dataHoraCotacao } = data[data.length - 1];
-            return { cotacao: cotacaoCompra, dataCotacao: dataHoraCotacao };
-        } else {
-            throw new Error("Dados indisponíveis.");
+        if (data.length === 0) {
+            throw new Error("Cotação indisponível para a data de hoje.");
         }
+
+        const cotacao = data[0].cotacaoCompra;
+        const dataCotacao = data[0].dataHoraCotacao;
+
+        return {
+            cotacao,
+            dataCotacao
+        };
     } catch (error) {
-        console.error("Erro ao buscar cotação do euro:", error.message);
-        throw error;
+        console.error("Erro ao buscar cotação do euro:", error.response ? error.response.data : error.message);
+        throw new Error("Erro ao buscar cotação do euro.");
     }
 };
-
-
-
-
-module.exports = fetchEuroRate;
