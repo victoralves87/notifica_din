@@ -6,13 +6,73 @@ const cron = require("node-cron");
 const sendEmail = require("./utils/emailService");
 const notificationRoutes = require("./routes/notifications");
 const fetchEuroRate = require("./utils/taxaEuro"); // Importando a função de 'utils/euroRate'
-
+const nodemailer = require("nodemailer");
 const app = express();
 app.use(express.json());
 app.use("/api", notificationRoutes); // Define o prefixo "/api" para as rotas
     
 // Caminho para o arquivo JSON onde os e-mails serão armazenados
 const emailsFilePath = path.join(__dirname, "emails.json");
+
+
+
+// Configurando o transporte do Nodemailer (usando Gmail como exemplo)
+const transporter = nodemailer.createTransport({
+    service: "gmail", // ou outro provedor SMTP
+    auth: {
+        user: "voctorralves@gmail.com", // Substitua pelo seu e-mail
+        pass: "sua senha de app", // Substitua pela senha ou App Password
+    },
+});
+
+// Rota para testar o envio de e-mails
+// Função para buscar a cotação do euro
+const fetchEuroRate2 = async () => {
+    const today = new Date().toISOString().split("T")[0]; // Data no formato YYYY-MM-DD
+    const formattedDate = today.split("-").reverse().join("-"); // Formato MM-DD-YYYY
+    const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='EUR'&@dataCotacao='${formattedDate}'&$top=1&$format=json&$select=cotacaoCompra,dataHoraCotacao`;
+
+    try {
+        const response = await axios.get(url);
+        const data = response.data.value;
+
+        if (data.length === 0) {
+            throw new Error("Cotação indisponível para a data de hoje.");
+        }
+
+        return {
+            cotacao: data[0].cotacaoCompra,
+            dataCotacao: data[0].dataHoraCotacao,
+        };
+    } catch (error) {
+        throw new Error("Erro ao buscar cotação do euro.");
+    }
+};
+
+// Rota para enviar e-mail com a cotação
+app.post("/send-email", async (req, res) => {
+    const { email } = req.body; // Recebe o e-mail do body da requisição
+
+    try {
+        const { cotacao, dataCotacao } = await fetchEuroRate();
+
+        // Configuração do e-mail
+        const mailOptions = {
+            from: "voctorralves@gmail.com",
+            to: email,
+            subject: "Cotação do Euro - Atualização Diária",
+            text: `Olá, a cotação do euro para hoje (${new Date(dataCotacao).toLocaleDateString()}) é de R$ ${cotacao.toFixed(2)}.`,
+        };
+
+        // Envia o e-mail
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({ message: "E-mail enviado com sucesso!" });
+    } catch (error) {
+        console.error("Erro ao enviar e-mail:", error.message);
+        res.status(500).json({ message: "Erro ao enviar e-mail." });
+    }
+});
 
 // Rota para retornar a cotação do euro
 app.get("/taxa-euro", async (req, res) => {
