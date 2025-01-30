@@ -26,9 +26,10 @@ const transporter = nodemailer.createTransport({
 // Função para buscar a cotação do euro
 const fetchEuroRate = async () => {
     const today = new Date().toISOString().split("T")[0]; // Data no formato YYYY-MM-DD
-    const formattedDate = today.split("-").reverse().join("-"); // Formato MM-DD-YYYY
-    const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda=%27EUR%27&@dataCotacao=%27${formattedDate}%27&$top=5&$format=json&$select=cotacaoCompra,dataHoraCotacao`;
+    const [year, month, day] = today.split("-");
+    const formattedDate = `${month}-${day}-${year}`; // Correta conversão para MM-DD-YYYY
 
+    const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda=%27EUR%27&@dataCotacao=%27${formattedDate}%27&$top=5&$format=json&$select=cotacaoCompra,dataHoraCotacao`;
 
     try {
         const response = await axios.get(url);
@@ -50,6 +51,7 @@ const fetchEuroRate = async () => {
         throw new Error("Erro ao buscar cotação do euro.");
     }
 };
+
 
 
 

@@ -1,15 +1,18 @@
 const axios = require("axios");
 
+const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+const [year, month, day] = today.split("-"); // Divide em partes
+const formattedDate = `${month}-${day}-${year}`; // Junta no formato correto
+
 const fetchEuroRate = async () => {
     // Pega a data de hoje no formato YYYY-MM-DD
     const today = new Date().toISOString().split("T")[0]; 
+    const [year, month, day] = today.split("-");
+    const formattedDate = `${month}-${day}-${year}`; // Formato MM-DD-YYYY
 
-    // Converte para o formato MM-DD-YYYY
-    const formattedDate = today.split("-").slice(1).concat(today.split("-")[0]).join("-");
+    console.log("Data formatada para a URL:", formattedDate);
 
     const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda=%27EUR%27&@dataCotacao=%27${formattedDate}%27&$top=5&$format=json&$select=cotacaoCompra,dataHoraCotacao`;
-
-    console.log("Data formatada para a URL:", formattedDate)
 
     try {
         const response = await axios.get(url);
@@ -31,3 +34,5 @@ const fetchEuroRate = async () => {
         throw new Error("Erro ao buscar cotação do euro.");
     }
 };
+
+
